@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Minha Rotina — Mandarim</title>
+<style>
+:root{color-scheme:dark;--bg:#10141b;--card:#181e27;--text:#f2f5f8;--muted:#9da8b5;--accent:#4d8dff;--learned:#243b5e}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:850px;margin:auto;padding:28px 18px 60px}h1{margin:0 0 6px;font-size:28px}header p{margin:0 0 18px;color:var(--muted)}
+.controls{position:sticky;top:0;z-index:5;background:rgba(16,20,27,.94);backdrop-filter:blur(10px);padding:12px 0;display:flex;gap:8px;flex-wrap:wrap}
+button{border:1px solid #35404e;background:#202833;color:var(--text);padding:9px 13px;border-radius:9px;cursor:pointer}
+button:hover{border-color:var(--accent)}.phrase{background:var(--card);border:1px solid #29323e;border-radius:14px;padding:18px;margin:12px 0}
+.zh{font-size:25px;line-height:1.7}.word{cursor:pointer;border-radius:5px;padding:1px 2px;transition:.15s}.word.learned{background:var(--learned);color:#9fc4ff}
+.pinyin{color:#9fc0ef;margin-top:8px;font-size:16px}.translation{color:#d1d7df;margin-top:6px}.hidden{display:none}
+.phrase-actions{margin-top:13px}.play{background:#245aa8;border-color:#3977d0}.hint{font-size:12px;color:var(--muted);margin-top:12px}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>Minha rotina — Mandarim</h1>
+<p>Ouça frase por frase, estude o pinyin e marque palavras que já aprendeu.</p>
+</header>
+<div class="controls">
+<button id="togglePinyin">Esconder pinyin</button>
+<button id="reset">Resetar palavras aprendidas</button>
+</div>
+<section id="app"></section>
+<p class="hint">Clique em uma palavra do hanzi para marcá-la como aprendida. O estado fica salvo neste navegador.</p>
+</main>
+<script>
+const phrases=[
+["你好，我叫卫浩然，我是一名私人教练。","Nǐ hǎo, wǒ jiào Wèi Hàorán, wǒ shì yì míng sīrén jiàoliàn.","Oi, meu nome é Edmilson e sou Personal Trainer."],
+["我每天早上四点起床学习中文。","Wǒ měitiān zǎoshang sì diǎn qǐchuáng xuéxí Zhōngwén.","Todo dia eu acordo às 4:00 da manhã para estudar chinês."],
+["早上五点我离开家。","Zǎoshang wǔ diǎn wǒ líkāi jiā.","Às 5:00 eu saio de casa."],
+["五点半我开始上第一节课。","Wǔ diǎn bàn wǒ kāishǐ shàng dì yī jié kè.","Às 5:30 começo a primeira aula."],
+["六点半我有第二个学生。","Liù diǎn bàn wǒ yǒu dì èr gè xuéshēng.","Às 6:30 tenho o segundo aluno."],
+["这两节课大约在七点半或八点结束。","Zhè liǎng jié kè dàyuē zài qī diǎn bàn huò bā diǎn jiéshù.","Essas duas aulas terminam por volta das 7:30 ou 8:00."],
+["然后我回家接我的妻子。","Ránhòu wǒ huí jiā jiē wǒ de qīzi.","Em seguida, volto para casa para buscar minha esposa."],
+["我也给她和她的姐姐上课。","Wǒ yě gěi tā hé tā de jiějie shàngkè.","Também dou aula para ela e para a irmã dela."],
+["我们去家附近的一家健身房。","Wǒmen qù jiā fùjìn de yì jiā jiànshēnfáng.","Vamos para uma academia perto da nossa casa."],
+["十点半左右，我们去学校接我们的儿子。","Shí diǎn bàn zuǒyòu, wǒmen qù xuéxiào jiē wǒmen de érzi.","Por volta das 10:30, vamos buscar nosso filho na escola."],
+["回家以后，我们一起吃午饭。","Huí jiā yǐhòu, wǒmen yìqǐ chī wǔfàn.","Quando chegamos em casa, almoçamos juntos."],
+["看完电影以后，我们会睡一会儿。","Kàn wán diànyǐng yǐhòu, wǒmen huì shuì yíhuìr.","Depois de assistir a um filme, dormimos um pouco."],
+["这样可以休息一下。","Zhèyàng kěyǐ xiūxi yíxià.","Assim podemos descansar um pouco."],
+["下午五点左右，我离开家去 Selfit 健身房工作。","Xiàwǔ wǔ diǎn zuǒyòu, wǒ líkāi jiā qù Selfit jiànshēnfáng gōngzuò.","Por volta das 17:00, saio de casa para trabalhar na academia Selfit."],
+["我在那里给很多学生上课，一直到晚上十一点。","Wǒ zài nàli gěi hěn duō xuéshēng shàngkè, yìzhí dào wǎnshang shíyī diǎn.","Lá eu dou aula para muitos alunos até às 23:00."],
+["我的一天大约在凌晨十二点半结束。","Wǒ de yì tiān dàyuē zài língchén shí’èr diǎn bàn jiéshù.","Meu dia termina por volta das 00:30."],
+["所以我睡得很少。","Suǒyǐ wǒ shuì de hěn shǎo.","Por isso eu durmo muito pouco."]
+];
+
+const key="mandarim_learned_v1";
+let learned=new Set(JSON.parse(localStorage.getItem(key)||"[]"));
+let showPinyin=true;
+
+function save(){localStorage.setItem(key,JSON.stringify([...learned]))}
+function speak(text){
+ if(!("speechSynthesis" in window)){alert("Seu navegador não oferece síntese de voz.");return}
+ speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(text); u.lang="zh-CN"; u.rate=.85;
+ const voices=speechSynthesis.getVoices();
+ const zh=voices.find(v=>v.lang.toLowerCase().startsWith("zh"));
+ if(zh)u.voice=zh;
+ speechSynthesis.speak(u);
+}
+function tokenize(s){
+ return [...s].map((c,i)=>({c,i})).filter(x=>!/[，。！？、\s]/.test(x.c));
+}
+function render(){
+ const app=document.getElementById("app"); app.innerHTML="";
+ phrases.forEach((p,idx)=>{
+  const card=document.createElement("article"); card.className="phrase";
+  const zh=document.createElement("div"); zh.className="zh";
+  tokenize(p[0]).forEach(({c,i})=>{
+   const span=document.createElement("span"); span.className="word";
+   const id=idx+"_"+i; span.dataset.id=id; span.textContent=c;
+   if(learned.has(id))span.classList.add("learned");
+   span.title="Clique para marcar como aprendido";
+   span.onclick=()=>{learned.has(id)?learned.delete(id):learned.add(id);save();span.classList.toggle("learned")};
+   zh.appendChild(span);
+  });
+  card.appendChild(zh);
+  const py=document.createElement("div"); py.className="pinyin"+(showPinyin?"":" hidden"); py.textContent=p[1]; card.appendChild(py);
+  const tr=document.createElement("div"); tr.className="translation"; tr.textContent=p[2]; card.appendChild(tr);
+  const actions=document.createElement("div"); actions.className="phrase-actions";
+  const b=document.createElement("button"); b.className="play"; b.textContent="▶ Ouvir frase"; b.onclick=()=>speak(p[0]); actions.appendChild(b);
+  card.appendChild(actions); app.appendChild(card);
+ });
+}
+document.getElementById("togglePinyin").onclick=()=>{
+ showPinyin=!showPinyin;
+ document.getElementById("togglePinyin").textContent=showPinyin?"Esconder pinyin":"Mostrar pinyin";
+ document.querySelectorAll(".pinyin").forEach(e=>e.classList.toggle("hidden",!showPinyin));
+};
+document.getElementById("reset").onclick=()=>{
+ if(confirm("Apagar todas as palavras marcadas como aprendidas?")){learned.clear();save();render();}
+};
+render();
+</script>
+</body>
+</html>
